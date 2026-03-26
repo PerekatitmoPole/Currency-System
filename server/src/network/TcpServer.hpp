@@ -11,6 +11,7 @@ public:
     TcpServer(boost::asio::io_context& ioContext, unsigned short port, const RequestRouter& router);
 
     void start();
+    void stop();
 
 private:
     void accept();

@@ -30,6 +30,18 @@ void writeLine(tcp::socket& socket, const std::string& line) {
     boost::asio::write(socket, boost::asio::buffer(payload));
 }
 
+void closeSocket(tcp::socket& socket) {
+    boost::system::error_code errorCode;
+
+    if (!socket.is_open()) {
+        return;
+    }
+
+    socket.shutdown(tcp::socket::shutdown_both, errorCode);
+    errorCode.clear();
+    socket.close(errorCode);
+}
+
 tcp::socket connectClient(boost::asio::io_context& ioContext, unsigned short port) {
     tcp::socket socket(ioContext);
     socket.connect({boost::asio::ip::address_v4::loopback(), port});
@@ -40,6 +52,7 @@ class RunningServer {
 public:
     RunningServer(const unsigned short port, const TestAppContext& context)
         : ioContext_(),
+          workGuard_(boost::asio::make_work_guard(ioContext_)),
           server_(ioContext_, port, context.router),
           worker_([this] {
               ioContext_.run();
@@ -49,14 +62,22 @@ public:
     }
 
     ~RunningServer() {
+        workGuard_.reset();
         ioContext_.stop();
     }
 
+    void contextStop();
+
 private:
     boost::asio::io_context ioContext_;
+    boost::asio::executor_work_guard<boost::asio::io_context::executor_type> workGuard_;
     network::TcpServer server_;
     std::jthread worker_;
 };
+
+    void RunningServer::contextStop() {
+        ioContext_.stop();
+    }
 
 }
 
@@ -81,6 +102,9 @@ TEST(ServerWorkTests, GetCurrenciesReturnsBuiltInCatalog) {
     EXPECT_EQ(requireField(fields, "currency4_code"), "JPY");
     EXPECT_EQ(requireField(fields, "currency5_code"), "RUB");
     EXPECT_EQ(requireField(fields, "currency6_code"), "USD");
+
+    server.contextStop();
+    closeSocket(socket);
 }
 
 TEST(NetworkIntegrationTests, IngestQuotesThenGetRatesReturnsStoredRates) {
@@ -139,6 +163,9 @@ TEST(NetworkIntegrationTests, IngestQuotesThenGetRatesReturnsStoredRates) {
     EXPECT_EQ(requireField(rateFields, "rate0_quote_code"), "USD");
     EXPECT_EQ(requireField(rateFields, "rate0_provider"), "ECB");
     EXPECT_EQ(requireField(rateFields, "rate0_rate"), "1.250000");
+
+    server.contextStop();
+    closeSocket(socket);
 }
 
 TEST(NetworkIntegrationTests, IngestQuotesThenConvertReturnsExpectedAmount) {
@@ -184,6 +211,9 @@ TEST(NetworkIntegrationTests, IngestQuotesThenConvertReturnsExpectedAmount) {
     EXPECT_EQ(requireField(convertFields, "amount"), "2.000000");
     EXPECT_EQ(requireField(convertFields, "rate"), "1.250000");
     EXPECT_EQ(requireField(convertFields, "result"), "2.500000");
+
+    server.contextStop();
+    closeSocket(socket);
 }
 
 TEST(NetworkIntegrationTests, IngestQuotesThenGetHistoryReturnsStoredPoints) {
@@ -250,6 +280,9 @@ TEST(NetworkIntegrationTests, IngestQuotesThenGetHistoryReturnsStoredPoints) {
 
     EXPECT_EQ(requireField(historyFields, "point0_rate"), "1.200000");
     EXPECT_EQ(requireField(historyFields, "point1_rate"), "1.250000");
+
+    server.contextStop();
+    closeSocket(socket);
 }
 
 TEST(NetworkIntegrationTests, ConvertSameCurrencyReturnsIdentityConversion) {
@@ -274,6 +307,9 @@ TEST(NetworkIntegrationTests, ConvertSameCurrencyReturnsIdentityConversion) {
     EXPECT_EQ(requireField(fields, "status"), "ok");
     EXPECT_EQ(requireField(fields, "rate"), "1.000000");
     EXPECT_EQ(requireField(fields, "result"), "15.000000");
+
+    server.contextStop();
+    closeSocket(socket);
 }
 
 TEST(NetworkIntegrationTests, GetRatesReturnsErrorWhenQuoteIsMissing) {
@@ -295,6 +331,9 @@ TEST(NetworkIntegrationTests, GetRatesReturnsErrorWhenQuoteIsMissing) {
     const auto fields = parseEnvelopePayload(context.serializer, response);
 
     EXPECT_EQ(requireField(fields, "status"), "error");
+
+    server.contextStop();
+    closeSocket(socket);
 }
 
 TEST(NetworkIntegrationTests, ConvertReturnsErrorWhenRateDoesNotExist) {
@@ -317,6 +356,9 @@ TEST(NetworkIntegrationTests, ConvertReturnsErrorWhenRateDoesNotExist) {
     const auto fields = parseEnvelopePayload(context.serializer, response);
 
     EXPECT_EQ(requireField(fields, "status"), "error");
+
+    server.contextStop();
+    closeSocket(socket);
 }
 
 TEST(NetworkIntegrationTests, IngestQuotesRejectsNegativeRate) {
@@ -344,6 +386,9 @@ TEST(NetworkIntegrationTests, IngestQuotesRejectsNegativeRate) {
     const auto fields = parseEnvelopePayload(context.serializer, response);
 
     EXPECT_EQ(requireField(fields, "status"), "error");
+
+    server.contextStop();
+    closeSocket(socket);
 }
 
 TEST(NetworkIntegrationTests, GetHistoryRejectsInvalidRange) {
@@ -368,6 +413,9 @@ TEST(NetworkIntegrationTests, GetHistoryRejectsInvalidRange) {
     const auto fields = parseEnvelopePayload(context.serializer, response);
 
     EXPECT_EQ(requireField(fields, "status"), "error");
+
+    server.contextStop();
+    closeSocket(socket);
 }
 
 TEST(NetworkIntegrationTests, UnknownCommandReturnsProtocolError) {
@@ -384,6 +432,9 @@ TEST(NetworkIntegrationTests, UnknownCommandReturnsProtocolError) {
 
     EXPECT_EQ(requireField(fields, "status"), "error");
     EXPECT_EQ(requireField(fields, "code"), "unknown_command");
+
+    server.contextStop();
+    closeSocket(socket);
 }
 
 TEST(NetworkIntegrationTests, MalformedPayloadReturnsProtocolError) {
@@ -400,6 +451,9 @@ TEST(NetworkIntegrationTests, MalformedPayloadReturnsProtocolError) {
 
     EXPECT_EQ(requireField(fields, "status"), "error");
     EXPECT_EQ(requireField(fields, "code"), "protocol_error");
+
+    server.contextStop();
+    closeSocket(socket);
 }
 
 TEST(NetworkIntegrationTests, SingleConnectionCanHandleFullScenario) {
@@ -489,6 +543,9 @@ TEST(NetworkIntegrationTests, SingleConnectionCanHandleFullScenario) {
         EXPECT_EQ(requireField(fields, "point_count"), "1");
         EXPECT_EQ(requireField(fields, "point0_rate"), "1.300000");
     }
+
+    server.contextStop();
+    closeSocket(socket);
 }
 
 } 

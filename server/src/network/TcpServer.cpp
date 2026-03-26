@@ -25,4 +25,11 @@ void TcpServer::accept() {
     });
 }
 
+void TcpServer::stop() {
+    boost::system::error_code errorCode;
+    acceptor_.cancel(errorCode);
+    errorCode.clear();
+    acceptor_.close(errorCode);
+}
+
 }
