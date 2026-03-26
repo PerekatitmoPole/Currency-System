@@ -116,6 +116,7 @@ if(BUILD_TESTS)
             server/tests/RequestRouterTests.cpp
             server/tests/NetworkIntegrationTests.cpp
             server/tests/TestHelpers.hpp
+            server/tests/ServerWorkTests.cpp
     )
 
     target_include_directories(currency_tests PRIVATE server/src ${BOOST_INCLUDE_DIR})
