@@ -1,0 +1,5 @@
+<RCC>
+  <qresource prefix="/client">
+    <file alias="styles/app.qss">assets/styles/app.qss</file>
+  </qresource>
+</RCC>

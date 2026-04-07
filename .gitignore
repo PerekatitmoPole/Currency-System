@@ -1,0 +1,31 @@
+# Build directories
+/build/
+/out/
+/cmake-build-*/
+/verify-*/
+
+# CMake and compiler artifacts
+CMakeCache.txt
+CMakeFiles/
+Makefile
+compile_commands.json
+*.obj
+*.o
+*.a
+*.lib
+*.dll
+*.exe
+*.exp
+*.ilk
+*.pdb
+
+# Qt generated artifacts
+moc_*.cpp
+qrc_*.cpp
+ui_*.h
+*.qmlc
+*.jsc
+*.rcc
+*.autosave
+*.user
+*.user.*

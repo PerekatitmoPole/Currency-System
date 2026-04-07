@@ -1,11 +1,12 @@
 cmake_minimum_required(VERSION 3.24)
-project(CurrencySystemServer VERSION 1.1.0 LANGUAGES CXX)
+project(CurrencySystemServer VERSION 1.2.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(BUILD_TESTS "Build unit tests" ON)
+option(BUILD_CLIENT "Build Qt client" ON)
 set(MIN_BOOST_VERSION "1.75.0")
 set(BOOST_BOOTSTRAP_VERSION "1.87.0")
 
@@ -94,6 +95,43 @@ endif()
 
 add_executable(currency_server server/src/main.cpp)
 target_link_libraries(currency_server PRIVATE currency_core)
+
+if(BUILD_CLIENT)
+    find_package(Qt6 QUIET COMPONENTS Widgets Network Charts Xml)
+
+    if(Qt6_FOUND)
+        message(STATUS "Qt6 found. Building currency_client target.")
+
+        file(GLOB_RECURSE CURRENCY_CLIENT_SOURCES CONFIGURE_DEPENDS
+            client/src/*.cpp
+            client/src/*.hpp
+        )
+
+        qt_add_executable(currency_client
+            ${CURRENCY_CLIENT_SOURCES}
+            client/resources.qrc
+        )
+
+        set_target_properties(currency_client PROPERTIES
+            AUTOMOC ON
+            AUTORCC ON
+            AUTOUIC OFF
+        )
+
+        target_include_directories(currency_client PRIVATE client/src)
+        target_link_libraries(currency_client PRIVATE
+            Qt6::Widgets
+            Qt6::Network
+            Qt6::Charts
+            Qt6::Xml
+        )
+    else()
+        message(WARNING
+            "Qt6 was not found. Skipping currency_client. "
+            "Set CMAKE_PREFIX_PATH or Qt6_DIR to a Qt 6 installation to enable the client build."
+        )
+    endif()
+endif()
 
 if(BUILD_TESTS)
     FetchContent_Declare(
