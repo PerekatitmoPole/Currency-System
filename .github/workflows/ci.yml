@@ -1,17 +1,14 @@
-name: Currency System Server CI
+name: Currency System CI
 
 on:
   push:
-    branches:
-      - main
-      - master
-      - develop
-      - feature/**
+    branches: ["**"]
   pull_request:
 
 jobs:
-  build-and-test:
+  server-build-and-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
 
     steps:
       - name: Checkout repository
@@ -31,20 +28,65 @@ jobs:
             pkg-config
 
       - name: Configure project
-        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON -DBUILD_CLIENT=OFF
 
       - name: Build project
         run: cmake --build build --parallel
 
       - name: Run tests
         working-directory: build
-        run: ctest --output-on-failure --verbose
+        timeout-minutes: 10
+        run: ctest --output-on-failure --verbose --timeout 120
 
       - name: Upload test logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: ctest-logs
+          path: |
+            build/Testing
+            build/**/*.log
+          if-no-files-found: ignore
+
+  client-build-and-test:
+    runs-on: windows-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: 6.7.2
+          arch: win64_mingw
+          modules: qtcharts
+
+      - name: Setup MinGW
+        uses: egor-tensin/setup-mingw@v2
+        with:
+          platform: x64
+          version: 13.1.0
+
+      - name: Configure project
+        shell: pwsh
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON -DBUILD_CLIENT=ON
+
+      - name: Build client tests
+        shell: pwsh
+        run: cmake --build build --target currency_client_tests --parallel
+
+      - name: Run client tests
+        shell: pwsh
+        timeout-minutes: 10
+        run: ctest --test-dir build --output-on-failure --verbose --timeout 120
+
+      - name: Upload client test logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-ctest-logs
           path: |
             build/Testing
             build/**/*.log

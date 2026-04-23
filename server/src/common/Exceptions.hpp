@@ -34,4 +34,10 @@ public:
         : AppError("protocol_error", message) {}
 };
 
+class ExternalApiError final : public AppError {
+public:
+    explicit ExternalApiError(const std::string& message)
+        : AppError("provider_unavailable", message) {}
+};
+
 }

@@ -29,25 +29,6 @@ common::Result<dto::ServerEnvelopeDto> TextProtocolCodec::decodeEnvelope(const Q
     }
 }
 
-dto::FieldMap TextProtocolCodec::toFields(const dto::UpdateQuotesRequestDto& request) const {
-    dto::FieldMap fields;
-    fields.insert("provider", request.provider);
-    fields.insert("batch_timestamp", common::DateTimeUtils::toIsoUtc(request.batchTimestamp));
-    fields.insert("quote_count", QString::number(request.quotes.size()));
-
-    for (int index = 0; index < request.quotes.size(); ++index) {
-        const auto& quote = request.quotes.at(index);
-        fields.insert(QString("quote%1_base_code").arg(index), quote.baseCurrency);
-        fields.insert(QString("quote%1_base_name").arg(index), quote.baseName.isEmpty() ? quote.baseCurrency : quote.baseName);
-        fields.insert(QString("quote%1_quote_code").arg(index), quote.quoteCurrency);
-        fields.insert(QString("quote%1_quote_name").arg(index), quote.quoteName.isEmpty() ? quote.quoteCurrency : quote.quoteName);
-        fields.insert(QString("quote%1_rate").arg(index), QString::number(quote.rate, 'f', 6));
-        fields.insert(QString("quote%1_source_timestamp").arg(index), common::DateTimeUtils::toIsoUtc(quote.timestamp));
-    }
-
-    return fields;
-}
-
 dto::FieldMap TextProtocolCodec::toFields(const dto::GetRatesRequestDto& request) const {
     dto::FieldMap fields;
     fields.insert("provider", request.provider);

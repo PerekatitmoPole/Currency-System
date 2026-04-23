@@ -10,6 +10,7 @@ namespace currency::repositories {
 class InMemoryQueryCache {
 public:
     bool tryGet(const std::string& key, std::string& payload) const;
+    bool tryGetStale(const std::string& key, std::string& payload) const;
     void put(const std::string& key, std::string payload, std::chrono::seconds ttl);
     void invalidateAll();
 

@@ -11,6 +11,31 @@
 
 namespace currency::tests {
 
+class CatalogProvider final : public providers::MarketDataProvider {
+public:
+    std::string key() const override {
+        return "catalog";
+    }
+
+    std::vector<providers::QuoteSnapshot> fetchLatest(
+        const std::string&,
+        const std::vector<std::string>&) const override {
+        return {};
+    }
+
+    std::vector<domain::HistoryPoint> fetchHistory(
+        const std::string&,
+        const std::string&,
+        std::chrono::system_clock::time_point,
+        std::chrono::system_clock::time_point) const override {
+        return {};
+    }
+
+    std::vector<domain::Currency> fetchCurrencies() const override {
+        return {domain::Currency{"AUD", "Australian Dollar", 2}};
+    }
+};
+
 TEST(IngestionServiceTests, StoresLatestQuoteAndRegistersCurrencies) {
     TestAppContext context;
 
@@ -31,7 +56,7 @@ TEST(IngestionServiceTests, StoresLatestQuoteAndRegistersCurrencies) {
 
     const auto result = context.ingestionService.ingest(request);
 
-    EXPECT_EQ(result.provider, "ECB");
+    EXPECT_EQ(result.provider, "ecb");
     EXPECT_EQ(result.acceptedCount, 1U);
     EXPECT_TRUE(context.currencyRepository.exists("EUR"));
     EXPECT_TRUE(context.currencyRepository.exists("USD"));
@@ -125,6 +150,19 @@ TEST(CurrencyQueryServiceTests, ContainsBuiltInCodes) {
     }
     EXPECT_TRUE(hasUsd);
     EXPECT_TRUE(hasJpy);
+}
+
+TEST(MarketDataRefreshServiceTests, RefreshCurrencyCatalogUpsertsProviderCurrencies) {
+    TestAppContext context;
+    CatalogProvider provider;
+    context.marketDataRefreshService.registerProvider(provider);
+
+    const auto count = context.marketDataRefreshService.refreshCurrencyCatalog();
+
+    EXPECT_GE(count, 1U);
+    const auto currency = context.currencyRepository.tryGet("AUD");
+    ASSERT_TRUE(currency.has_value());
+    EXPECT_EQ(currency->name, "Australian Dollar");
 }
 
 TEST(QuoteQueryServiceTests, ReturnsRequestedQuotes) {

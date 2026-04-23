@@ -10,14 +10,14 @@ ConversionService::ConversionService(repositories::InMemoryQuoteRepository& quot
     : quoteRepository_(quoteRepository) {}
 
 dto::ConvertResponseDto ConversionService::convert(const dto::ConvertRequestDto& request) const {
-    common::requireNotBlank(request.provider, "provider");
+    const auto provider = common::normalizeProviderKey(request.provider);
     common::requirePositive(request.amount, "amount");
     const auto fromCurrency = common::normalizeCurrencyCode(request.fromCurrency);
     const auto toCurrency = common::normalizeCurrencyCode(request.toCurrency);
 
     if (fromCurrency == toCurrency) {
         return dto::ConvertResponseDto{
-            .provider = request.provider,
+            .provider = provider,
             .fromCurrency = fromCurrency,
             .toCurrency = toCurrency,
             .amount = request.amount,
@@ -27,14 +27,14 @@ dto::ConvertResponseDto ConversionService::convert(const dto::ConvertRequestDto&
         };
     }
 
-    const auto quote = quoteRepository_.tryGet(request.provider, fromCurrency, toCurrency);
+    const auto quote = quoteRepository_.tryGet(provider, fromCurrency, toCurrency);
     if (!quote.has_value()) {
         throw common::NotFoundError(
-            "No conversion quote found for pair " + fromCurrency + "/" + toCurrency + " and provider " + request.provider);
+            "No conversion quote found for pair " + fromCurrency + "/" + toCurrency + " and provider " + provider);
     }
 
     return dto::ConvertResponseDto{
-        .provider = request.provider,
+        .provider = provider,
         .fromCurrency = fromCurrency,
         .toCurrency = toCurrency,
         .amount = request.amount,

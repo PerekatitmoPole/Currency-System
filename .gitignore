@@ -29,3 +29,33 @@ ui_*.h
 *.autosave
 *.user
 *.user.*
+
+# IDE
+.idea/
+.vscode/
+.vs/
+
+# Local tooling
+/.vcpkg/
+/vcpkg_installed/
+/aqtinstall.log
+tools/__pycache__/
+tools/runtime_tmp/
+*.pyc
+*.pyo
+
+# Logs and runtime dumps
+logs/*.jsonl
+logs/*.log
+logs/**/*.jsonl
+logs/**/*.log
+*.stackdump
+*.dmp
+
+# OS and editor temp artifacts
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.tmp
+*.temp

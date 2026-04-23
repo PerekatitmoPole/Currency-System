@@ -25,7 +25,7 @@ QString DateTimeUtils::toIsoUtc(const QDateTime& value) {
 
 QString DateTimeUtils::toDisplayString(const QDateTime& value) {
     if (!value.isValid()) {
-        return "n/a";
+        return "Нет данных";
     }
 
     return value.toLocalTime().toString("dd.MM.yyyy HH:mm");

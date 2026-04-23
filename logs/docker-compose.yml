@@ -1,0 +1,17 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: currency-logs-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: currency_logs
+      POSTGRES_USER: currency_user
+      POSTGRES_PASSWORD: currency_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - currency_logs_pgdata:/var/lib/postgresql/data
+      - ./init:/docker-entrypoint-initdb.d:ro
+volumes:
+  currency_logs_pgdata:
+

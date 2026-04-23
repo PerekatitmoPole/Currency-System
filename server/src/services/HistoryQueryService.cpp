@@ -39,7 +39,7 @@ HistoryQueryService::HistoryQueryService(repositories::InMemoryHistoryRepository
     : historyRepository_(historyRepository) {}
 
 dto::GetHistoryResponseDto HistoryQueryService::getHistory(const dto::GetHistoryRequestDto& request) const {
-    common::requireNotBlank(request.provider, "provider");
+    const auto provider = common::normalizeProviderKey(request.provider);
     const auto baseCode = common::normalizeCurrencyCode(request.baseCode);
     const auto quoteCode = common::normalizeCurrencyCode(request.quoteCode);
     const auto from = common::fromIsoString(request.from);
@@ -50,11 +50,11 @@ dto::GetHistoryResponseDto HistoryQueryService::getHistory(const dto::GetHistory
         throw common::ValidationError("History interval is invalid: from must be less than or equal to to");
     }
 
-    const auto rawPoints = historyRepository_.query(request.provider, baseCode, quoteCode, from, to);
+    const auto rawPoints = historyRepository_.query(provider, baseCode, quoteCode, from, to);
     const auto aggregated = aggregateByStep(rawPoints, step);
 
     dto::GetHistoryResponseDto response{
-        .provider = request.provider,
+        .provider = provider,
         .baseCode = baseCode,
         .quoteCode = quoteCode,
         .from = request.from,

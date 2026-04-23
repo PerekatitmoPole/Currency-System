@@ -6,7 +6,9 @@
 #include "controllers/HistoryController.hpp"
 #include "controllers/IngestionController.hpp"
 #include "controllers/QuoteController.hpp"
+#include "logging/Logger.hpp"
 #include "network/RequestRouter.hpp"
+#include "providers/MarketDataProvider.hpp"
 #include "repositories/InMemoryCurrencyRepository.hpp"
 #include "repositories/InMemoryHistoryRepository.hpp"
 #include "repositories/InMemoryQueryCache.hpp"
@@ -16,30 +18,71 @@
 #include "services/CurrencyQueryService.hpp"
 #include "services/HistoryQueryService.hpp"
 #include "services/IngestionService.hpp"
+#include "services/MarketDataRefreshService.hpp"
 #include "services/QuoteQueryService.hpp"
+
+#include "common/Exceptions.hpp"
 
 #include <map>
 #include <string>
 
 namespace currency::tests {
 
+class FallbackProvider final : public providers::MarketDataProvider {
+public:
+    explicit FallbackProvider(std::string providerKey)
+        : providerKey_(std::move(providerKey)) {}
+
+    std::string key() const override {
+        return providerKey_;
+    }
+
+    std::vector<providers::QuoteSnapshot> fetchLatest(
+        const std::string&,
+        const std::vector<std::string>&) const override {
+        return {};
+    }
+
+    std::vector<domain::HistoryPoint> fetchHistory(
+        const std::string&,
+        const std::string&,
+        std::chrono::system_clock::time_point,
+        std::chrono::system_clock::time_point) const override {
+        return {};
+    }
+
+private:
+    std::string providerKey_;
+};
+
 struct TestAppContext {
+    logging::Logger logger;
     repositories::InMemoryCurrencyRepository currencyRepository;
     repositories::InMemoryQuoteRepository quoteRepository;
     repositories::InMemoryHistoryRepository historyRepository;
     repositories::InMemoryQueryCache cache;
     serialization::TextProtocolSerializer serializer;
     services::IngestionService ingestionService{currencyRepository, quoteRepository, historyRepository, cache};
+    services::MarketDataRefreshService marketDataRefreshService{logger, currencyRepository, quoteRepository, historyRepository};
     services::CurrencyQueryService currencyQueryService{currencyRepository};
     services::QuoteQueryService quoteQueryService{currencyRepository, quoteRepository};
     services::HistoryQueryService historyQueryService{historyRepository};
     services::ConversionService conversionService{quoteRepository};
+    FallbackProvider ecbProvider{"ecb"};
+    FallbackProvider frankfurterProvider{"frankfurter"};
+    FallbackProvider cbrProvider{"cbr"};
     controllers::IngestionController ingestionController{ingestionService, serializer};
-    controllers::CurrencyController currencyController{currencyQueryService, cache, serializer};
-    controllers::QuoteController quoteController{quoteQueryService, cache, serializer};
-    controllers::HistoryController historyController{historyQueryService, cache, serializer};
-    controllers::ConversionController conversionController{conversionService, serializer};
-    network::RequestRouter router{ingestionController, currencyController, quoteController, historyController, conversionController, serializer};
+    controllers::CurrencyController currencyController{currencyQueryService, marketDataRefreshService, cache, serializer};
+    controllers::QuoteController quoteController{logger, marketDataRefreshService, quoteQueryService, cache, serializer};
+    controllers::HistoryController historyController{logger, marketDataRefreshService, historyQueryService, cache, serializer};
+    controllers::ConversionController conversionController{marketDataRefreshService, conversionService, serializer};
+    network::RequestRouter router{logger, ingestionController, currencyController, quoteController, historyController, conversionController, serializer};
+
+    TestAppContext() {
+        marketDataRefreshService.registerProvider(ecbProvider);
+        marketDataRefreshService.registerProvider(frankfurterProvider);
+        marketDataRefreshService.registerProvider(cbrProvider);
+    }
 };
 
 inline dto::FieldMap parseEnvelopePayload(serialization::TextProtocolSerializer& serializer, const std::string& raw) {

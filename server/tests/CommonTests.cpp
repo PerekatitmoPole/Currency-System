@@ -20,7 +20,7 @@ TEST(TimeUtilsTests, ParseStepSeconds) {
 }
 
 TEST(TimeUtilsTests, ParseStepMinutes) {
-    EXPECT_EQ(common::parseStep("15m"), std::chrono::minutes(15));
+    EXPECT_EQ(common::parseStep("15min"), std::chrono::minutes(15));
 }
 
 TEST(TimeUtilsTests, ParseStepHours) {
@@ -29,6 +29,14 @@ TEST(TimeUtilsTests, ParseStepHours) {
 
 TEST(TimeUtilsTests, ParseStepDays) {
     EXPECT_EQ(common::parseStep("3d"), std::chrono::hours(72));
+}
+
+TEST(TimeUtilsTests, ParseStepMonths) {
+    EXPECT_EQ(common::parseStep("1m"), std::chrono::hours(24 * 30));
+}
+
+TEST(TimeUtilsTests, ParseStepYears) {
+    EXPECT_EQ(common::parseStep("1y"), std::chrono::hours(24 * 365));
 }
 
 TEST(TimeUtilsTests, ParseStepRejectsUnsupportedUnit) {
@@ -45,6 +53,10 @@ TEST(ValidationTests, NormalizeCurrencyCodeRejectsNonLetters) {
 
 TEST(ValidationTests, NormalizeCurrencyCodeRejectsWrongLength) {
     EXPECT_THROW(common::normalizeCurrencyCode("EURO"), common::ValidationError);
+}
+
+TEST(ValidationTests, NormalizeProviderKeyLowercasesValue) {
+    EXPECT_EQ(common::normalizeProviderKey("ECB"), "ecb");
 }
 
 TEST(ValidationTests, RequireNotBlankRejectsEmptyString) {

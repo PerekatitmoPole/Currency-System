@@ -50,10 +50,10 @@ tcp::socket connectClient(boost::asio::io_context& ioContext, unsigned short por
 
 class RunningServer {
 public:
-    RunningServer(const unsigned short port, const TestAppContext& context)
+    RunningServer(const unsigned short port, TestAppContext& context)
         : ioContext_(),
           workGuard_(boost::asio::make_work_guard(ioContext_)),
-          server_(ioContext_, port, context.router),
+          server_(ioContext_, port, context.router, context.logger),
           worker_([this] {
               ioContext_.run();
           }) {
@@ -156,12 +156,12 @@ TEST(NetworkIntegrationTests, IngestQuotesThenGetRatesReturnsStoredRates) {
 
     EXPECT_EQ(requireField(rateFields, "rate1_base_code"), "EUR");
     EXPECT_EQ(requireField(rateFields, "rate1_quote_code"), "RUB");
-    EXPECT_EQ(requireField(rateFields, "rate1_provider"), "ECB");
+    EXPECT_EQ(requireField(rateFields, "rate1_provider"), "ecb");
     EXPECT_EQ(requireField(rateFields, "rate1_rate"), "100.500000");
 
     EXPECT_EQ(requireField(rateFields, "rate0_base_code"), "EUR");
     EXPECT_EQ(requireField(rateFields, "rate0_quote_code"), "USD");
-    EXPECT_EQ(requireField(rateFields, "rate0_provider"), "ECB");
+    EXPECT_EQ(requireField(rateFields, "rate0_provider"), "ecb");
     EXPECT_EQ(requireField(rateFields, "rate0_rate"), "1.250000");
 
     server.contextStop();

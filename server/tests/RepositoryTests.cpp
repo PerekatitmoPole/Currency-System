@@ -88,6 +88,22 @@ TEST(QuoteRepositoryTests, FindByBaseFiltersProviderAndBaseCurrency) {
     ASSERT_EQ(quotes.size(), 2U);
 }
 
+TEST(QuoteRepositoryTests, NormalizesKeysOnInsertAndLookup) {
+    repositories::InMemoryQuoteRepository repository;
+    repository.upsert(domain::Quote{
+        .key = domain::QuoteKey{"ECB", "eur", "usd"},
+        .rate = 1.2,
+        .sourceTimestamp = common::fromIsoString("2026-03-19T10:00:00Z"),
+        .receivedAt = common::fromIsoString("2026-03-19T10:00:00Z"),
+    });
+
+    const auto quote = repository.tryGet("ecb", "EUR", "USD");
+    ASSERT_TRUE(quote.has_value());
+    EXPECT_EQ(quote->key.provider, "ecb");
+    EXPECT_EQ(quote->key.baseCurrency, "EUR");
+    EXPECT_EQ(quote->key.quoteCurrency, "USD");
+}
+
 TEST(HistoryRepositoryTests, AppendSortsPointsByTimestamp) {
     repositories::InMemoryHistoryRepository repository;
     repository.append("ECB", "EUR", "USD", {common::fromIsoString("2026-03-19T11:00:00Z"), 1.2});
@@ -141,6 +157,15 @@ TEST(QueryCacheTests, InvalidateAllClearsEntries) {
     cache.invalidateAll();
     std::string value;
     EXPECT_FALSE(cache.tryGet("key", value));
+}
+
+TEST(QueryCacheTests, ExpiredEntryCanStillBeReadAsStale) {
+    repositories::InMemoryQueryCache cache;
+    cache.put("key", "payload", std::chrono::seconds(0));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    std::string value;
+    EXPECT_TRUE(cache.tryGetStale("key", value));
+    EXPECT_EQ(value, "payload");
 }
 
 }

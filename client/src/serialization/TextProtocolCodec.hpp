@@ -12,7 +12,6 @@ public:
     QString encodeRequest(const QString& command, const dto::FieldMap& payload) const;
     common::Result<dto::ServerEnvelopeDto> decodeEnvelope(const QString& rawMessage) const;
 
-    dto::FieldMap toFields(const dto::UpdateQuotesRequestDto& request) const;
     dto::FieldMap toFields(const dto::GetRatesRequestDto& request) const;
     dto::FieldMap toFields(const dto::GetHistoryRequestDto& request) const;
     dto::FieldMap toFields(const dto::ConvertRequestDto& request) const;

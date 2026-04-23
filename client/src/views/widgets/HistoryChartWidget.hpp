@@ -2,14 +2,12 @@
 
 #include "dto/UiDtos.hpp"
 
+#include <QtCharts/QChartView>
+#include <QtCharts/QDateTimeAxis>
+#include <QtCharts/QLineSeries>
+#include <QtCharts/QValueAxis>
+#include <QLabel>
 #include <QWidget>
-
-namespace QtCharts {
-class QChartView;
-class QLineSeries;
-class QDateTimeAxis;
-class QValueAxis;
-}
 
 namespace currency::client::views {
 
@@ -20,9 +18,11 @@ public:
     HistoryChartWidget(QWidget* parent = nullptr);
 
     void setPoints(const QList<dto::ChartPointDto>& points, const QString& title);
+    bool saveAsPng(const QString& path) const;
 
 private:
-    QtCharts::QChartView* chartView_{nullptr};
+    QChartView* chartView_{nullptr};
+    QLabel* emptyStateLabel_{nullptr};
 };
 
 }

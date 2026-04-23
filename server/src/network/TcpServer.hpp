@@ -1,5 +1,6 @@
 #pragma once
 
+#include "logging/Logger.hpp"
 #include "network/RequestRouter.hpp"
 
 #include <boost/asio.hpp>
@@ -8,7 +9,11 @@ namespace currency::network {
 
 class TcpServer {
 public:
-    TcpServer(boost::asio::io_context& ioContext, unsigned short port, const RequestRouter& router);
+    TcpServer(
+        boost::asio::io_context& ioContext,
+        unsigned short port,
+        const RequestRouter& router,
+        logging::Logger& logger);
 
     void start();
     void stop();
@@ -19,6 +24,7 @@ private:
     boost::asio::io_context& ioContext_;
     boost::asio::ip::tcp::acceptor acceptor_;
     const RequestRouter& router_;
+    logging::Logger& logger_;
 };
 
 }

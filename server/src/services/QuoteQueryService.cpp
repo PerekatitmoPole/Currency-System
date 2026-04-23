@@ -13,7 +13,7 @@ QuoteQueryService::QuoteQueryService(
       quoteRepository_(quoteRepository) {}
 
 dto::GetRatesResponseDto QuoteQueryService::getRates(const dto::GetRatesRequestDto& request) const {
-    common::requireNotBlank(request.provider, "provider");
+    const auto provider = common::normalizeProviderKey(request.provider);
     const auto baseCode = common::normalizeCurrencyCode(request.baseCode);
 
     if (!currencyRepository_.exists(baseCode)) {
@@ -30,10 +30,10 @@ dto::GetRatesResponseDto QuoteQueryService::getRates(const dto::GetRatesRequestD
             throw common::NotFoundError("Quote currency is not supported: " + quoteCode);
         }
 
-        const auto quote = quoteRepository_.tryGet(request.provider, baseCode, quoteCode);
+        const auto quote = quoteRepository_.tryGet(provider, baseCode, quoteCode);
         if (!quote.has_value()) {
             throw common::NotFoundError(
-                "No latest quote found for pair " + baseCode + "/" + quoteCode + " and provider " + request.provider);
+                "No latest quote found for pair " + baseCode + "/" + quoteCode + " and provider " + provider);
         }
 
         response.quotes.push_back(dto::RateDto{

@@ -21,7 +21,7 @@ IngestionService::IngestionService(
       queryCache_(queryCache) {}
 
 dto::UpdateQuotesResponseDto IngestionService::ingest(const dto::UpdateQuotesRequestDto& request) const {
-    common::requireNotBlank(request.provider, "provider");
+    const auto normalizedProvider = common::normalizeProviderKey(request.provider);
     common::requireNotBlank(request.batchTimestamp, "batch timestamp");
     if (request.quotes.empty()) {
         throw common::ValidationError("Quotes collection must not be empty");
@@ -40,7 +40,7 @@ dto::UpdateQuotesResponseDto IngestionService::ingest(const dto::UpdateQuotesReq
         currencyRepository_.upsert(domain::Currency{quoteCode, item.quoteName.empty() ? quoteCode : item.quoteName, 2});
 
         const domain::Quote quote{
-            .key = domain::QuoteKey{request.provider, baseCode, quoteCode},
+            .key = domain::QuoteKey{normalizedProvider, baseCode, quoteCode},
             .rate = item.rate,
             .sourceTimestamp = sourceTimestamp,
             .receivedAt = batchTimestamp,
@@ -48,7 +48,7 @@ dto::UpdateQuotesResponseDto IngestionService::ingest(const dto::UpdateQuotesReq
         quoteRepository_.upsert(quote);
 
         historyRepository_.append(
-            request.provider,
+            normalizedProvider,
             baseCode,
             quoteCode,
             domain::HistoryPoint{sourceTimestamp, item.rate});
@@ -58,7 +58,7 @@ dto::UpdateQuotesResponseDto IngestionService::ingest(const dto::UpdateQuotesReq
     queryCache_.invalidateAll();
 
     return dto::UpdateQuotesResponseDto{
-        .provider = request.provider,
+        .provider = normalizedProvider,
         .processedAt = common::toIsoString(std::chrono::system_clock::now()),
         .acceptedCount = accepted,
     };

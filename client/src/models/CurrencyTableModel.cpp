@@ -38,6 +38,10 @@ QVariant CurrencyTableModel::data(const QModelIndex& index, const int role) cons
         }
     }
 
+    if (role == Qt::TextAlignmentRole) {
+        return static_cast<int>(Qt::AlignCenter);
+    }
+
     return {};
 }
 
@@ -48,15 +52,15 @@ QVariant CurrencyTableModel::headerData(const int section, const Qt::Orientation
 
     switch (section) {
     case 0:
-        return "Source";
+        return "Источник";
     case 1:
-        return "Base";
+        return "Базовая";
     case 2:
-        return "Quote";
+        return "Котируемая";
     case 3:
-        return "Rate";
+        return "Курс";
     case 4:
-        return "Updated";
+        return "Обновлено";
     default:
         return {};
     }

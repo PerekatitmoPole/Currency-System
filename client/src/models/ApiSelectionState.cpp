@@ -19,7 +19,13 @@ bool ApiSelectionState::isSelected(const dto::ApiSource source) const {
 }
 
 QList<dto::ApiSource> ApiSelectionState::selectedSources() const {
-    return QList<dto::ApiSource>(selectedSources_.cbegin(), selectedSources_.cend());
+    QList<dto::ApiSource> orderedSources;
+    for (const auto source : dto::apiSourceCatalog()) {
+        if (selectedSources_.contains(source.source)) {
+            orderedSources.push_back(source.source);
+        }
+    }
+    return orderedSources;
 }
 
 }

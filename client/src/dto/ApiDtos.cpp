@@ -1,89 +1,148 @@
 #include "dto/ApiDtos.hpp"
 
+#include <QHash>
+
+#include <array>
 #include <type_traits>
 
 namespace currency::client::dto {
 
-QString toDisplayName(const ApiSource source) {
-    switch (source) {
-    case ApiSource::Frankfurter:
-        return "Frankfurter";
-    case ApiSource::Ecb:
-        return "ECB";
-    case ApiSource::CurrencyApi:
-        return "CurrencyAPI";
-    case ApiSource::OpenExchangeRates:
-        return "Open Exchange Rates";
-    case ApiSource::ExchangeRateHost:
-        return "exchangerate.host";
-    case ApiSource::Fixer:
-        return "Fixer";
-    case ApiSource::CurrencyFreaks:
-        return "CurrencyFreaks";
-    case ApiSource::AlphaVantage:
-        return "Alpha Vantage";
-    case ApiSource::Cbr:
-        return "ЦБ РФ";
+namespace {
+
+const std::array<ApiSourceDescriptor, 3> kCatalog{{
+    {
+        .source = ApiSource::Cbr,
+        .stableKey = "cbr",
+        .displayName = "ЦБ РФ",
+        .shortDescription = "Официальные курсы Банка России. Поддерживает ограниченный перечень валют, публикуемый ЦБ РФ.",
+        .baseUrl = "https://www.cbr.ru/",
+        .requiresApiKey = false,
+        .availableViaServer = true,
+        .supportsLatest = true,
+        .supportsHistory = true,
+        .supportsCurrencyCatalog = true,
+    },
+    {
+        .source = ApiSource::Ecb,
+        .stableKey = "ecb",
+        .displayName = "ECB",
+        .shortDescription = "Справочные курсы Европейского центрального банка относительно EUR.",
+        .baseUrl = "https://www.ecb.europa.eu/",
+        .requiresApiKey = false,
+        .availableViaServer = true,
+        .supportsLatest = true,
+        .supportsHistory = true,
+        .supportsCurrencyCatalog = true,
+    },
+    {
+        .source = ApiSource::Frankfurter,
+        .stableKey = "frankfurter",
+        .displayName = "Frankfurter",
+        .shortDescription = "Открытый REST-сервис для актуальных курсов, истории и справочника валют.",
+        .baseUrl = "https://api.frankfurter.dev/",
+        .requiresApiKey = false,
+        .availableViaServer = true,
+        .supportsLatest = true,
+        .supportsHistory = true,
+        .supportsCurrencyCatalog = true,
+    },
+}};
+
+const ApiSourceDescriptor& findDescriptor(const ApiSource source) {
+    for (const auto& descriptor : kCatalog) {
+        if (descriptor.source == source) {
+            return descriptor;
+        }
     }
 
-    return "Unknown";
+    return kCatalog.front();
+}
+
+QList<ApiSource> sourcesByCapability(const bool latest, const bool history) {
+    QList<ApiSource> result;
+    for (const auto& descriptor : kCatalog) {
+        if (!descriptor.availableViaServer) {
+            continue;
+        }
+        if (latest && !descriptor.supportsLatest) {
+            continue;
+        }
+        if (history && !descriptor.supportsHistory) {
+            continue;
+        }
+        result.push_back(descriptor.source);
+    }
+    return result;
+}
+
+}
+
+const ApiSourceDescriptor& describeApiSource(const ApiSource source) {
+    return findDescriptor(source);
+}
+
+QList<ApiSourceDescriptor> apiSourceCatalog() {
+    QList<ApiSourceDescriptor> result;
+    result.reserve(static_cast<qsizetype>(kCatalog.size()));
+    for (const auto& descriptor : kCatalog) {
+        result.push_back(descriptor);
+    }
+    return result;
+}
+
+QString toDisplayName(const ApiSource source) {
+    return describeApiSource(source).displayName;
 }
 
 QString toStableKey(const ApiSource source) {
-    switch (source) {
-    case ApiSource::Frankfurter:
-        return "frankfurter";
-    case ApiSource::Ecb:
-        return "ecb";
-    case ApiSource::CurrencyApi:
-        return "currencyapi";
-    case ApiSource::OpenExchangeRates:
-        return "openexchangerates";
-    case ApiSource::ExchangeRateHost:
-        return "exchangeratehost";
-    case ApiSource::Fixer:
-        return "fixer";
-    case ApiSource::CurrencyFreaks:
-        return "currencyfreaks";
-    case ApiSource::AlphaVantage:
-        return "alphavantage";
-    case ApiSource::Cbr:
-        return "cbr";
+    return describeApiSource(source).stableKey;
+}
+
+std::optional<ApiSource> fromStableKey(const QString& stableKey) {
+    const auto normalizedKey = stableKey.trimmed().toLower();
+    for (const auto& descriptor : kCatalog) {
+        if (descriptor.stableKey == normalizedKey) {
+            return descriptor.source;
+        }
     }
 
-    return "unknown";
+    if (normalizedKey == "cbrrf") {
+        return ApiSource::Cbr;
+    }
+
+    return std::nullopt;
 }
 
 bool requiresApiKey(const ApiSource source) {
-    switch (source) {
-    case ApiSource::CurrencyApi:
-    case ApiSource::OpenExchangeRates:
-    case ApiSource::Fixer:
-    case ApiSource::CurrencyFreaks:
-    case ApiSource::AlphaVantage:
-        return true;
-    case ApiSource::Frankfurter:
-    case ApiSource::Ecb:
-    case ApiSource::ExchangeRateHost:
-    case ApiSource::Cbr:
-        return false;
-    }
+    return describeApiSource(source).requiresApiKey;
+}
 
-    return false;
+bool isServerAvailable(const ApiSource source) {
+    return describeApiSource(source).availableViaServer;
+}
+
+bool supportsLatest(const ApiSource source) {
+    return describeApiSource(source).supportsLatest;
+}
+
+bool supportsHistory(const ApiSource source) {
+    return describeApiSource(source).supportsHistory;
+}
+
+bool supportsCurrencyCatalog(const ApiSource source) {
+    return describeApiSource(source).supportsCurrencyCatalog;
 }
 
 QList<ApiSource> allApiSources() {
-    return {
-        ApiSource::Frankfurter,
-        ApiSource::Ecb,
-        ApiSource::CurrencyApi,
-        ApiSource::OpenExchangeRates,
-        ApiSource::ExchangeRateHost,
-        ApiSource::Fixer,
-        ApiSource::CurrencyFreaks,
-        ApiSource::AlphaVantage,
-        ApiSource::Cbr,
-    };
+    return sourcesByCapability(false, false);
+}
+
+QList<ApiSource> sourcesWithLatest() {
+    return sourcesByCapability(true, false);
+}
+
+QList<ApiSource> sourcesWithHistory() {
+    return sourcesByCapability(false, true);
 }
 
 }

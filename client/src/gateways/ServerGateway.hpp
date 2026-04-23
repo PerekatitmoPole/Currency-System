@@ -19,7 +19,7 @@ public:
     void disconnectFromServer();
     bool isConnected() const;
 
-    common::Result<dto::ServerEnvelopeDto> sendUpdateQuotes(const dto::UpdateQuotesRequestDto& request);
+    common::Result<dto::ServerEnvelopeDto> sendGetCurrencies(const QString& provider = {});
     common::Result<dto::ServerEnvelopeDto> sendGetRates(const dto::GetRatesRequestDto& request);
     common::Result<dto::ServerEnvelopeDto> sendGetHistory(const dto::GetHistoryRequestDto& request);
     common::Result<dto::ServerEnvelopeDto> sendConvert(const dto::ConvertRequestDto& request);

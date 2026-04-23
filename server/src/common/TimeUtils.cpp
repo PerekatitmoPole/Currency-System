@@ -71,7 +71,7 @@ std::chrono::seconds parseStep(const std::string& step) {
     if (unit == "s") {
         return std::chrono::seconds(amount);
     }
-    if (unit == "m") {
+    if (unit == "min" || unit == "mins") {
         return std::chrono::minutes(amount);
     }
     if (unit == "h") {
@@ -79,6 +79,12 @@ std::chrono::seconds parseStep(const std::string& step) {
     }
     if (unit == "d") {
         return std::chrono::hours(24 * amount);
+    }
+    if (unit == "m" || unit == "mo" || unit == "mon" || unit == "month" || unit == "months") {
+        return std::chrono::hours(24 * 30 * amount);
+    }
+    if (unit == "y" || unit == "yr" || unit == "year" || unit == "years") {
+        return std::chrono::hours(24 * 365 * amount);
     }
 
     throw ValidationError("Unsupported step unit: " + unit);

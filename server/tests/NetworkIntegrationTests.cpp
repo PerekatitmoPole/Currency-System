@@ -34,7 +34,7 @@ TEST(NetworkIntegrationTests, SessionHandlesConvertRequestOverSocketPair) {
     clientSocket.connect({boost::asio::ip::address_v4::loopback(), port});
     auto serverSocket = acceptor.accept();
 
-    auto session = std::make_shared<network::Session>(std::move(serverSocket), context.router);
+    auto session = std::make_shared<network::Session>(std::move(serverSocket), context.router, context.logger);
     session->start();
 
     std::jthread worker([&ioContext] { ioContext.run(); });
@@ -61,7 +61,7 @@ TEST(NetworkIntegrationTests, SessionReturnsProtocolErrorForMalformedPayload) {
     clientSocket.connect({boost::asio::ip::address_v4::loopback(), port});
     auto serverSocket = acceptor.accept();
 
-    auto session = std::make_shared<network::Session>(std::move(serverSocket), context.router);
+    auto session = std::make_shared<network::Session>(std::move(serverSocket), context.router, context.logger);
     session->start();
 
     std::jthread worker([&ioContext] { ioContext.run(); });
@@ -80,7 +80,7 @@ TEST(NetworkIntegrationTests, TcpServerAcceptsConnectionAndHandlesGetCurrencies)
     TestAppContext context;
 
     boost::asio::io_context ioContext;
-    network::TcpServer server(ioContext, 23145, context.router);
+    network::TcpServer server(ioContext, 23145, context.router, context.logger);
     server.start();
     std::jthread worker([&ioContext] { ioContext.run(); });
 
@@ -100,7 +100,7 @@ TEST(NetworkIntegrationTests, TcpServerHandlesIngestThenConvertOnSingleConnectio
     TestAppContext context;
 
     boost::asio::io_context ioContext;
-    network::TcpServer server(ioContext, 23146, context.router);
+    network::TcpServer server(ioContext, 23146, context.router, context.logger);
     server.start();
     std::jthread worker([&ioContext] { ioContext.run(); });
 
@@ -121,6 +121,60 @@ TEST(NetworkIntegrationTests, TcpServerHandlesIngestThenConvertOnSingleConnectio
     const auto convertFields = parseEnvelopePayload(context.serializer, convertResponse);
     EXPECT_EQ(requireField(convertFields, "status"), "ok");
     EXPECT_EQ(requireField(convertFields, "result"), "2.500000");
+
+    ioContext.stop();
+}
+
+TEST(NetworkIntegrationTests, TcpServerRejectsUnsupportedProviderRequest) {
+    TestAppContext context;
+
+    boost::asio::io_context ioContext;
+    network::TcpServer server(ioContext, 23147, context.router, context.logger);
+    server.start();
+    std::jthread worker([&ioContext] { ioContext.run(); });
+
+    boost::asio::ip::tcp::socket clientSocket(ioContext);
+    clientSocket.connect({boost::asio::ip::address_v4::loopback(), 23147});
+    boost::asio::write(clientSocket, boost::asio::buffer(std::string(
+        "command=get_rates;provider=unknown;base_code=EUR;quote_codes=USD\n")));
+
+    const auto response = readLine(clientSocket);
+    const auto fields = parseEnvelopePayload(context.serializer, response);
+    EXPECT_EQ(requireField(fields, "status"), "error");
+    EXPECT_EQ(requireField(fields, "code"), "not_found");
+
+    ioContext.stop();
+}
+
+TEST(NetworkIntegrationTests, TcpServerHandlesAggregatedRatesRequestAfterIngestingQuotes) {
+    TestAppContext context;
+
+    boost::asio::io_context ioContext;
+    network::TcpServer server(ioContext, 23148, context.router, context.logger);
+    server.start();
+    std::jthread worker([&ioContext] { ioContext.run(); });
+
+    boost::asio::ip::tcp::socket clientSocket(ioContext);
+    clientSocket.connect({boost::asio::ip::address_v4::loopback(), 23148});
+
+    boost::asio::write(clientSocket, boost::asio::buffer(std::string(
+        "command=ingest_quotes;provider=ECB;batch_timestamp=2026-03-19T10%3A00%3A00Z;quote_count=2;"
+        "quote0_base_code=EUR;quote0_base_name=Euro;quote0_quote_code=USD;quote0_quote_name=US%20Dollar;"
+        "quote0_rate=1.25;quote0_source_timestamp=2026-03-19T10%3A00%3A00Z;"
+        "quote1_base_code=EUR;quote1_base_name=Euro;quote1_quote_code=GBP;quote1_quote_name=Pound%20Sterling;"
+        "quote1_rate=0.86;quote1_source_timestamp=2026-03-19T10%3A00%3A00Z\n")));
+    const auto ingestResponse = readLine(clientSocket);
+    const auto ingestFields = parseEnvelopePayload(context.serializer, ingestResponse);
+    EXPECT_EQ(requireField(ingestFields, "status"), "ok");
+
+    boost::asio::write(clientSocket, boost::asio::buffer(std::string(
+        "command=get_rates;provider=ECB;base_code=EUR;quote_codes=USD,GBP\n")));
+    const auto ratesResponse = readLine(clientSocket);
+    const auto ratesFields = parseEnvelopePayload(context.serializer, ratesResponse);
+    EXPECT_EQ(requireField(ratesFields, "status"), "ok");
+    EXPECT_EQ(requireField(ratesFields, "rate_count"), "2");
+    EXPECT_EQ(requireField(ratesFields, "rate0_quote_code"), "USD");
+    EXPECT_EQ(requireField(ratesFields, "rate1_quote_code"), "GBP");
 
     ioContext.stop();
 }

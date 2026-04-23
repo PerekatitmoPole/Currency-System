@@ -1,21 +1,12 @@
 #pragma once
 
-#include "dto/NormalizedDtos.hpp"
-
 #include <QDateTime>
-#include <QList>
 #include <QMap>
 #include <QString>
 
 namespace currency::client::dto {
 
 using FieldMap = QMap<QString, QString>;
-
-struct UpdateQuotesRequestDto {
-    QString provider;
-    QDateTime batchTimestamp;
-    QList<NormalizedQuoteDto> quotes;
-};
 
 struct GetRatesRequestDto {
     QString provider;

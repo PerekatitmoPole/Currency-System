@@ -1,5 +1,7 @@
 #include "models/AggregationTableModel.hpp"
 
+#include <QColor>
+
 namespace currency::client::models {
 
 AggregationTableModel::AggregationTableModel(QObject* parent)
@@ -10,7 +12,7 @@ int AggregationTableModel::rowCount(const QModelIndex& parent) const {
 }
 
 int AggregationTableModel::columnCount(const QModelIndex& parent) const {
-    return parent.isValid() ? 0 : 6;
+    return parent.isValid() ? 0 : 7;
 }
 
 QVariant AggregationTableModel::data(const QModelIndex& index, const int role) const {
@@ -32,9 +34,27 @@ QVariant AggregationTableModel::data(const QModelIndex& index, const int role) c
         case 4:
             return QString::number(item.maximumRate, 'f', 6);
         case 5:
+            return item.providerCount;
+        case 6:
             return item.providers;
         default:
             break;
+        }
+    }
+
+    if (role == Qt::TextAlignmentRole) {
+        if (index.column() >= 2 && index.column() <= 5) {
+            return static_cast<int>(Qt::AlignVCenter | Qt::AlignRight);
+        }
+        return static_cast<int>(Qt::AlignVCenter | Qt::AlignLeft);
+    }
+
+    if (role == Qt::BackgroundRole) {
+        if (index.column() == 3) {
+            return QColor("#e7f6ef");
+        }
+        if (index.column() == 4) {
+            return QColor("#fff1f1");
         }
     }
 
@@ -48,17 +68,19 @@ QVariant AggregationTableModel::headerData(const int section, const Qt::Orientat
 
     switch (section) {
     case 0:
-        return "Base";
+        return "Базовая";
     case 1:
-        return "Quote";
+        return "Котируемая";
     case 2:
-        return "Average";
+        return "Среднее";
     case 3:
-        return "Min";
+        return "Минимум";
     case 4:
-        return "Max";
+        return "Максимум";
     case 5:
-        return "Providers";
+        return "Источников";
+    case 6:
+        return "Провайдеры";
     default:
         return {};
     }

@@ -1,13 +1,12 @@
 #pragma once
 
-#include "dto/ApiDtos.hpp"
-
-#include <QHash>
 #include <QWidget>
 
 class QLineEdit;
+class QLabel;
 class QPushButton;
 class QSpinBox;
+class QString;
 
 namespace currency::client::views {
 
@@ -19,20 +18,18 @@ public:
 
     QLineEdit* hostEdit() const;
     QSpinBox* portSpinBox() const;
-    QLineEdit* defaultBaseEdit() const;
-    QLineEdit* defaultQuotesEdit() const;
-    QLineEdit* apiKeyEdit(dto::ApiSource source) const;
     QPushButton* connectButton() const;
     QPushButton* applyButton() const;
+    void setConnectionOverview(const QString& state, const QString& endpoint, const QString& details, bool connected);
 
 private:
     QLineEdit* hostEdit_{nullptr};
     QSpinBox* portSpinBox_{nullptr};
-    QLineEdit* defaultBaseEdit_{nullptr};
-    QLineEdit* defaultQuotesEdit_{nullptr};
     QPushButton* connectButton_{nullptr};
     QPushButton* applyButton_{nullptr};
-    QHash<dto::ApiSource, QLineEdit*> apiKeyEdits_;
+    QLabel* stateLabel_{nullptr};
+    QLabel* endpointLabel_{nullptr};
+    QLabel* detailsLabel_{nullptr};
 };
 
 }

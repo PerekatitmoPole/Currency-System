@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <QHash>
+#include <QSet>
 #include <QStringList>
 
 namespace currency::client::services {
@@ -85,19 +86,27 @@ dto::AggregationSummaryDto AggregationService::summarize(const QList<dto::Normal
         return summary;
     }
 
+    QSet<QString> providers;
     summary.baseCurrency = quotes.first().baseCurrency;
     summary.quoteCurrency = quotes.first().quoteCurrency;
     summary.sampleCount = quotes.size();
+    summary.providerCount = 0;
     summary.averageRate = 0.0;
     summary.minimumRate = quotes.first().rate;
     summary.maximumRate = quotes.first().rate;
+    summary.bestRate = quotes.first().rate;
+    summary.latestTimestamp = quotes.first().timestamp;
 
     for (const auto& quote : quotes) {
         summary.averageRate += quote.rate;
         summary.minimumRate = std::min(summary.minimumRate, quote.rate);
         summary.maximumRate = std::max(summary.maximumRate, quote.rate);
+        summary.bestRate = std::min(summary.bestRate, quote.rate);
+        summary.latestTimestamp = std::max(summary.latestTimestamp, quote.timestamp);
+        providers.insert(quote.providerName);
     }
 
+    summary.providerCount = providers.size();
     summary.averageRate /= quotes.size();
     return summary;
 }

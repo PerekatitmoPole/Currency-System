@@ -13,6 +13,7 @@
 #include <QHash>
 #include <QList>
 #include <QObject>
+#include <QSet>
 #include <QStringList>
 
 namespace currency::client::models {
@@ -28,6 +29,8 @@ public:
 
     void setAvailableCurrencies(const QList<CurrencyViewModel>& currencies);
     QList<CurrencyViewModel> availableCurrencies() const;
+    void setCurrenciesForSource(dto::ApiSource source, const QList<CurrencyViewModel>& currencies);
+    QList<CurrencyViewModel> currenciesForSource(dto::ApiSource source) const;
 
     void setNormalizedQuotes(const QList<dto::NormalizedQuoteDto>& quotes);
     QList<dto::NormalizedQuoteDto> normalizedQuotes() const;
@@ -49,6 +52,8 @@ public:
 
     void setConnectionStatus(const dto::ConnectionStatusDto& status);
     dto::ConnectionStatusDto connectionStatus() const;
+    void markServerConnected(const QString& message = {});
+    void markServerDisconnected(const QString& message);
 
     void setServerHost(const QString& host);
     QString serverHost() const;
@@ -66,23 +71,29 @@ public:
     QDate historyFromDate() const;
     QDate historyToDate() const;
 
-    void setApiKey(dto::ApiSource source, const QString& apiKey);
-    QString apiKey(dto::ApiSource source) const;
+    void setHistoryStep(const QString& step);
+    QString historyStep() const;
+
+    void setConversionResult(const dto::ConversionResultDto& result);
+    dto::ConversionResultDto conversionResult() const;
 
 signals:
     void selectedSourcesChanged();
     void availableCurrenciesChanged();
+    void providerCurrenciesChanged();
     void latestRatesChanged();
     void historyChanged();
     void aggregationChanged();
     void connectionStatusChanged();
     void settingsChanged();
+    void conversionChanged();
     void errorRaised(const QString& title, const QString& message);
     void infoRaised(const QString& title, const QString& message);
 
 private:
     ApiSelectionState apiSelectionState_;
     QList<CurrencyViewModel> currencies_;
+    QHash<dto::ApiSource, QList<CurrencyViewModel>> currenciesBySource_;
     QList<dto::NormalizedQuoteDto> normalizedQuotes_;
     QList<RateViewModel> latestRates_;
     QList<dto::NormalizedHistoryPointDto> normalizedHistory_;
@@ -96,7 +107,8 @@ private:
     QStringList defaultQuoteCurrencies_{"USD", "GBP", "RUB", "JPY", "CNY"};
     QDate historyFromDate_{QDate::currentDate().addDays(-30)};
     QDate historyToDate_{QDate::currentDate()};
-    QHash<dto::ApiSource, QString> apiKeys_;
+    QString historyStep_{"1d"};
+    dto::ConversionResultDto conversionResult_;
 };
 
 }
