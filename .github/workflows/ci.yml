@@ -63,32 +63,18 @@ jobs:
           version: 6.7.2
           arch: win64_mingw
           modules: qtcharts
+          tools: "tools_mingw,qt.tools.win64_mingw1310"
 
-      - name: Install MinGW and Ninja (Chocolatey)
+      - name: Install Ninja (Chocolatey)
         shell: pwsh
         run: |
-          choco install mingw -y --no-progress --version=13.1.0
           choco install ninja -y --no-progress
-          # mingw 13.1.0+ chocolatey package adds ProgramData\mingw64; older layouts live under chocolatey\lib\mingw
-          $mingwCandidates = @(
-            "C:\ProgramData\mingw64\mingw64\bin",
-            "C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin"
-          )
-          $mingwBin = $mingwCandidates | Where-Object { Test-Path (Join-Path $_ "g++.exe") } | Select-Object -First 1
-          if (-not $mingwBin) {
-            $installRoot = "C:\ProgramData\chocolatey\lib\mingw\tools\install"
-            if (Test-Path $installRoot) {
-              $gpp = Get-ChildItem -Path $installRoot -Recurse -Filter "g++.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
-              if ($gpp) { $mingwBin = $gpp.DirectoryName }
-            }
-          }
-          if (-not $mingwBin) {
-            Write-Error "MinGW g++.exe not found (checked ProgramData\mingw64 and chocolatey install tree)."
+          ninja --version
+          if (-not (Get-Command g++.exe -ErrorAction SilentlyContinue)) {
+            Write-Error "g++.exe not found on PATH after Qt install."
             exit 1
           }
-          Add-Content $env:GITHUB_PATH $mingwBin
-          & (Join-Path $mingwBin "g++.exe") --version
-          ninja --version
+          g++.exe --version
 
       - name: Configure project
         shell: pwsh
