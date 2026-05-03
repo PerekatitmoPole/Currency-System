@@ -69,9 +69,20 @@ function(currency_prepare_dependencies)
         URL https://github.com/jmcnamara/libxlsxwriter/archive/refs/tags/v1.2.4.zip
         DOWNLOAD_EXTRACT_TIMESTAMP TRUE
     )
+    FetchContent_Declare(
+        zlib
+        URL https://github.com/madler/zlib/archive/refs/tags/v1.3.1.tar.gz
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    )
 
     if(EXISTS "${PROJECT_SOURCE_DIR}/vcpkg_installed/x64-mingw-dynamic/include/zlib.h")
         set(ZLIB_ROOT "${PROJECT_SOURCE_DIR}/vcpkg_installed/x64-mingw-dynamic" CACHE STRING "Preferred ZLIB root" FORCE)
+    endif()
+
+    find_package(ZLIB QUIET)
+    if(NOT ZLIB_FOUND)
+        set(ZLIB_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+        FetchContent_MakeAvailable(zlib)
     endif()
 
     set(fetch_targets nlohmann_json tinyxml2 libxlsxwriter)

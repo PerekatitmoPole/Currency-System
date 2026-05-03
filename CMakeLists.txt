@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 
-project(CurrencySystem VERSION 2.0.0 LANGUAGES CXX)
+project(CurrencySystem VERSION 2.0.0 LANGUAGES CXX C)
 
 option(BUILD_TESTS "Build unit tests" ON)
 option(BUILD_CLIENT "Build Qt client" ON)
