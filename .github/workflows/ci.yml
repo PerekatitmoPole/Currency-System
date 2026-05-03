@@ -57,13 +57,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
         with:
           version: 6.7.2
           arch: win64_mingw
           modules: qtcharts
-          tools: "tools_mingw,qt.tools.win64_mingw1310"
+          setup-python: false
+          tools: "tools_mingw90,qt.tools.win64_mingw900"
 
       - name: Install Ninja (Chocolatey)
         shell: pwsh
