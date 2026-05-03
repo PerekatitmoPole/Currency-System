@@ -89,12 +89,12 @@ jobs:
           CXX: g++
         run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON -DBUILD_CLIENT=ON
 
-      - name: Build client tests
+      - name: Build tests
         shell: pwsh
         env:
           CC: gcc
           CXX: g++
-        run: cmake --build build --target currency_client_tests --parallel
+        run: cmake --build build --target currency_tests currency_client_tests --parallel
 
       - name: Run client tests
         shell: pwsh
