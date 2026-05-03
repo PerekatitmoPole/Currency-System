@@ -26,9 +26,13 @@ std::string toIsoString(const std::chrono::system_clock::time_point value) {
     const auto raw = std::chrono::system_clock::to_time_t(value);
     std::tm timeInfo{};
 #ifdef _WIN32
-    gmtime_s(&timeInfo, &raw);
+    if (gmtime_s(&timeInfo, &raw) != 0) {
+        throw ValidationError("Unable to format UTC timestamp");
+    }
 #else
-    gmtime_r(&raw, &timeInfo);
+    if (gmtime_r(&raw, &timeInfo) == nullptr) {
+        throw ValidationError("Unable to format UTC timestamp");
+    }
 #endif
 
     std::ostringstream output;

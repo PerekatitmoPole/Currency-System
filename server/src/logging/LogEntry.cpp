@@ -26,7 +26,7 @@ std::string toString(const LogLevel level) {
 std::string toIsoUtc(const std::chrono::system_clock::time_point timestamp) {
     const auto time = std::chrono::system_clock::to_time_t(timestamp);
     std::tm utcTime{};
-#if defined(_WIN32) && !defined(__MINGW32__)
+#if defined(_WIN32)
     if (gmtime_s(&utcTime, &time) != 0) {
         return {};
     }

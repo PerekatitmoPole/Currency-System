@@ -96,7 +96,7 @@ jobs:
           CXX: g++
         run: cmake --build build --target currency_tests currency_client_tests --parallel
 
-      - name: Run client tests
+      - name: Run tests
         shell: pwsh
         timeout-minutes: 10
         env:
