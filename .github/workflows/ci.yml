@@ -63,23 +63,40 @@ jobs:
           arch: win64_mingw
           modules: qtcharts
 
-      - name: Setup MinGW
-        uses: egor-tensin/setup-mingw@v2
-        with:
-          platform: x64
-          version: 13.1.0
+      - name: Install MinGW and Ninja (Chocolatey)
+        shell: pwsh
+        run: |
+          choco install mingw -y --no-progress --version=13.1.0
+          choco install ninja -y --no-progress
+          $mingwBin = "C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin"
+          if (-not (Test-Path $mingwBin)) {
+            Write-Error "MinGW bin not found at $mingwBin"
+            exit 1
+          }
+          Add-Content $env:GITHUB_PATH $mingwBin
+          & "$mingwBin\g++.exe" --version
+          ninja --version
 
       - name: Configure project
         shell: pwsh
+        env:
+          CC: gcc
+          CXX: g++
         run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON -DBUILD_CLIENT=ON
 
       - name: Build client tests
         shell: pwsh
+        env:
+          CC: gcc
+          CXX: g++
         run: cmake --build build --target currency_client_tests --parallel
 
       - name: Run client tests
         shell: pwsh
         timeout-minutes: 10
+        env:
+          CC: gcc
+          CXX: g++
         run: ctest --test-dir build --output-on-failure --verbose --timeout 120
 
       - name: Upload client test logs on failure
