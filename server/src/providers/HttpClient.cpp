@@ -2,6 +2,7 @@
 
 #include "common/Exceptions.hpp"
 
+#if defined(_WIN32)
 #include <windows.h>
 #include <winhttp.h>
 
@@ -128,3 +129,75 @@ std::string HttpClient::get(const std::string& url, const std::chrono::milliseco
 }
 
 }
+
+#else
+
+#include <curl/curl.h>
+
+#include <algorithm>
+#include <cstddef>
+#include <limits>
+#include <mutex>
+#include <string>
+
+namespace currency::providers {
+
+namespace {
+
+std::once_flag curlGlobalInitOnce;
+
+void ensureCurlInitialized() {
+    std::call_once(curlGlobalInitOnce, [] {
+        curl_global_init(CURL_GLOBAL_DEFAULT);
+    });
+}
+
+size_t appendWriteCallback(char* ptr, size_t size, size_t nmemb, void* userdata) {
+    auto* body = static_cast<std::string*>(userdata);
+    body->append(ptr, size * nmemb);
+    return size * nmemb;
+}
+
+}
+
+std::string HttpClient::get(const std::string& url, const std::chrono::milliseconds timeout) const {
+    ensureCurlInitialized();
+
+    CURL* curl = curl_easy_init();
+    if (curl == nullptr) {
+        throw common::ExternalApiError("Unable to initialize libcurl");
+    }
+
+    std::string body;
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, appendWriteCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &body);
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, "CurrencySystem/2.0");
+
+    const auto ms = std::min(
+        timeout.count(),
+        static_cast<std::chrono::milliseconds::rep>(std::numeric_limits<long>::max()));
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, static_cast<long>(ms));
+
+    const CURLcode result = curl_easy_perform(curl);
+    if (result != CURLE_OK) {
+        curl_easy_cleanup(curl);
+        throw common::ExternalApiError(std::string("HTTP request failed: ") + curl_easy_strerror(result));
+    }
+
+    long statusCode = 0;
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &statusCode);
+    curl_easy_cleanup(curl);
+
+    if (statusCode >= 400) {
+        throw common::ExternalApiError("HTTP provider request failed with status " + std::to_string(statusCode));
+    }
+
+    return body;
+}
+
+}
+
+#endif

@@ -5,7 +5,11 @@
 #include "common/TimeUtils.hpp"
 #include "common/Validation.hpp"
 
+#if defined(_WIN32)
 #include <windows.h>
+#else
+#include <iconv.h>
+#endif
 
 #include <tinyxml2.h>
 
@@ -51,6 +55,7 @@ std::string windows1251ToUtf8(const std::string_view value) {
         return {};
     }
 
+#if defined(_WIN32)
     const auto wideSize = MultiByteToWideChar(1251, 0, value.data(), static_cast<int>(value.size()), nullptr, 0);
     if (wideSize <= 0) {
         return std::string(value);
@@ -67,6 +72,29 @@ std::string windows1251ToUtf8(const std::string_view value) {
     std::string result(utf8Size, '\0');
     WideCharToMultiByte(CP_UTF8, 0, wideValue.data(), wideSize, result.data(), utf8Size, nullptr, nullptr);
     return result;
+#else
+    iconv_t descriptor = iconv_open("UTF-8", "CP1251");
+    if (descriptor == reinterpret_cast<iconv_t>(-1)) {
+        return std::string(value);
+    }
+
+    std::string input(value);
+    size_t inputLeft = input.size();
+    char* inputPtr = input.data();
+
+    std::string output(input.size() * 4 + 16, '\0');
+    size_t outputLeft = output.size();
+    char* outputPtr = output.data();
+
+    if (iconv(descriptor, &inputPtr, &inputLeft, &outputPtr, &outputLeft) == static_cast<size_t>(-1)) {
+        iconv_close(descriptor);
+        return std::string(value);
+    }
+
+    iconv_close(descriptor);
+    output.resize(output.size() - outputLeft);
+    return output;
+#endif
 }
 
 std::optional<double> resolveRate(

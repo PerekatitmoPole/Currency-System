@@ -25,6 +25,7 @@ jobs:
             zip \
             unzip \
             curl \
+            libcurl4-openssl-dev \
             pkg-config
 
       - name: Configure project
@@ -68,13 +69,25 @@ jobs:
         run: |
           choco install mingw -y --no-progress --version=13.1.0
           choco install ninja -y --no-progress
-          $mingwBin = "C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin"
-          if (-not (Test-Path $mingwBin)) {
-            Write-Error "MinGW bin not found at $mingwBin"
+          # mingw 13.1.0+ chocolatey package adds ProgramData\mingw64; older layouts live under chocolatey\lib\mingw
+          $mingwCandidates = @(
+            "C:\ProgramData\mingw64\mingw64\bin",
+            "C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin"
+          )
+          $mingwBin = $mingwCandidates | Where-Object { Test-Path (Join-Path $_ "g++.exe") } | Select-Object -First 1
+          if (-not $mingwBin) {
+            $installRoot = "C:\ProgramData\chocolatey\lib\mingw\tools\install"
+            if (Test-Path $installRoot) {
+              $gpp = Get-ChildItem -Path $installRoot -Recurse -Filter "g++.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+              if ($gpp) { $mingwBin = $gpp.DirectoryName }
+            }
+          }
+          if (-not $mingwBin) {
+            Write-Error "MinGW g++.exe not found (checked ProgramData\mingw64 and chocolatey install tree)."
             exit 1
           }
           Add-Content $env:GITHUB_PATH $mingwBin
-          & "$mingwBin\g++.exe" --version
+          & (Join-Path $mingwBin "g++.exe") --version
           ninja --version
 
       - name: Configure project
