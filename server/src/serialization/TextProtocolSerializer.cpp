@@ -5,6 +5,7 @@
 #include <charconv>
 #include <cctype>
 #include <iomanip>
+#include <locale>
 #include <sstream>
 #include <stdexcept>
 
@@ -261,11 +262,11 @@ std::string TextProtocolSerializer::readString(const dto::FieldMap& payload, con
 
 double TextProtocolSerializer::readDouble(const dto::FieldMap& payload, const std::string& key) {
     const auto raw = readString(payload, key);
+    std::istringstream input(raw);
+    input.imbue(std::locale::classic());
     double value = 0.0;
-    const auto* begin = raw.data();
-    const auto* end = raw.data() + raw.size();
-    const auto result = std::from_chars(begin, end, value);
-    if (result.ec != std::errc() || result.ptr != end) {
+    input >> std::noskipws >> value;
+    if (input.fail() || !input.eof()) {
         throw common::ProtocolError("Field '" + key + "' must be a valid number");
     }
     return value;
